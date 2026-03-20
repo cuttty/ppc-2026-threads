@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <tuple>
 
 #include "frolova_s_radix_sort_double/common/include/common.hpp"
 #include "frolova_s_radix_sort_double/seq/include/ops_seq.hpp"
+#include "frolova_s_radix_sort_double/omp/include/ops_omp.hpp"
 #include "util/include/perf_test_util.hpp"
 
 namespace frolova_s_radix_sort_double {
@@ -42,8 +44,10 @@ class FrolovaSRadixSortDoubleRunPerfTests : public ppc::util::BaseRunPerfTests<I
 
 namespace {
 
-const auto kAllPerfTasks =
-    ppc::util::MakeAllPerfTasks<InType, FrolovaSRadixSortDoubleSEQ>(PPC_SETTINGS_example_threads);
+const auto kAllPerfTasks = std::tuple_cat(
+    ppc::util::MakeAllPerfTasks<InType, FrolovaSRadixSortDoubleSEQ>(PPC_SETTINGS_example_threads),
+    ppc::util::MakeAllPerfTasks<InType, FrolovaSRadixSortDoubleOMP>(PPC_SETTINGS_example_threads)
+);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 const auto kPerfTestName = FrolovaSRadixSortDoubleRunPerfTests::CustomPerfTestName;
