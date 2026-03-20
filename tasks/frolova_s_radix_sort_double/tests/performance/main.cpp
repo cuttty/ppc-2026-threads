@@ -22,7 +22,7 @@ class FrolovaSRadixSortDoubleRunPerfTests : public ppc::util::BaseRunPerfTests<I
   OutType expected_res;
 
   void SetUp() override {
-    const size_t vect_sz = 1000000;
+    const size_t vect_sz = 1000000;  // for new commut
     input_data.resize(vect_sz);
 
     for (size_t i = 0; i < vect_sz; ++i) {

@@ -36,7 +36,7 @@ class FrolovaSRadixSortDoubleRunFuncTests : public ppc::util::BaseRunFuncTests<I
       return;
     }
 
-    size_t vect_sz = 0;
+    size_t vect_sz = 0;  // for new commit
     file >> vect_sz;
 
     std::vector<double> vect_data(vect_sz);

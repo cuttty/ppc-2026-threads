@@ -14,7 +14,7 @@ class FrolovaSRadixSortDoubleOMP : public BaseTask {
 
  private:
   bool ValidationImpl() override;
-  bool PreProcessingImpl() override;
+  bool PreProcessingImpl() override;  // for new commit
   bool RunImpl() override;
   bool PostProcessingImpl() override;
 };

@@ -3,8 +3,6 @@
 #include <algorithm>
 #include <bit>
 #include <cstdint>
-#include <cstring>
-#include <utility>
 #include <vector>
 
 #include "frolova_s_radix_sort_double/common/include/common.hpp"
@@ -31,45 +29,52 @@ bool FrolovaSRadixSortDoubleOMP::RunImpl() {
   }
 
   std::vector<double> working = input;
-
   const int radix = 256;
-  const int num_bits = 8;
   const int num_passes = sizeof(uint64_t);
 
   for (int pass = 0; pass < num_passes; ++pass) {
     std::vector<int> count(radix, 0);
 
-#pragma omp parallel default(none) shared(working, count, pass, radix, num_bits)
+#pragma omp parallel default(none) shared(working, count, pass)
     {
       std::vector<int> local_count(radix, 0);
 #pragma omp for nowait
-      for (size_t i = 0; i < working.size(); ++i) {
+      for (size_t i = 0; i < working.size(); i++) {  // NOLINT
         auto bits = std::bit_cast<uint64_t>(working[i]);
-        int byte = static_cast<int>((bits >> (pass * num_bits)) & 0xFF);
+        int byte = static_cast<int>((bits >> (pass * 8)) & 255U);
         ++local_count[byte];
       }
 #pragma omp critical
       {
-        for (int j = 0; j < radix; ++j) {
+        for (int j = 0; j < radix; j++) {
           count[j] += local_count[j];
         }
       }
     }
 
     int total = 0;
-    for (int i = 0; i < radix; ++i) {
+    for (int i = radix - 1; i >= 0; i--) {
       int old = count[i];
       count[i] = total;
       total += old;
     }
 
     std::vector<double> temp(working.size());
-#pragma omp parallel for default(none) shared(working, temp, count, pass, radix, num_bits)
-    for (size_t i = 0; i < working.size(); ++i) {
-      auto bits = std::bit_cast<uint64_t>(working[i]);
-      int byte = static_cast<int>((bits >> (pass * num_bits)) & 0xFF);
-      int pos = __sync_fetch_and_add(&count[byte], 1);
-      temp[pos] = working[i];
+#pragma omp parallel default(none) shared(working, temp, count, pass)
+    {
+#pragma omp for
+      for (size_t i = working.size(); i > 0; i--) {  // NOLINT
+        size_t idx = i - 1;
+        auto bits = std::bit_cast<uint64_t>(working[idx]);
+        int byte = static_cast<int>((bits >> (pass * 8)) & 255U);
+        int pos;
+#pragma omp atomic capture
+        {
+          pos = count[byte];
+          count[byte]++;
+        }
+        temp[pos] = working[idx];
+      }
     }
 
     working.swap(temp);

@@ -8,7 +8,7 @@
 namespace frolova_s_radix_sort_double {
 
 using InType = std::vector<double>;
-using OutType = std::vector<double>;
+using OutType = std::vector<double>;  // for new commit
 using TestType = std::string;
 using BaseTask = ppc::task::Task<InType, OutType>;
 
