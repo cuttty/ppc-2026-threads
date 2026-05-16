@@ -10,6 +10,10 @@
 #include <utility>
 #include <vector>
 
+// Прямое включение для InType согласно misc-include-cleaner
+#include "frolova_s_radix_sort_double/common/include/common.hpp"
+#include "task/include/task.hpp"
+
 namespace frolova_s_radix_sort_double {
 
 FrolovaSRadixSortDoubleALL::FrolovaSRadixSortDoubleALL(const InType &in) {
@@ -85,7 +89,11 @@ std::vector<double> FrolovaSRadixSortDoubleALL::SimpleMerge(const std::vector<do
                                                             const std::vector<double> &b) {
   std::vector<double> res;
   res.reserve(a.size() + b.size());
-  size_t i = 0, j = 0;
+
+  // Разделили объявления для readability-isolate-declaration
+  size_t i = 0;
+  size_t j = 0;
+
   while (i < a.size() && j < b.size()) {
     if (a[i] <= b[j]) {
       res.push_back(a[i++]);
@@ -102,30 +110,32 @@ std::vector<double> FrolovaSRadixSortDoubleALL::SimpleMerge(const std::vector<do
   return res;
 }
 
+// Избавились от рекурсии (misc-no-recursion) и переписали под size_t
 std::vector<double> FrolovaSRadixSortDoubleALL::ParallelMerge(std::vector<std::vector<double>> &chunks) {
   if (chunks.empty()) {
     return {};
   }
-  if (chunks.size() == 1) {
-    return std::move(chunks[0]);
-  }
 
-  std::vector<std::vector<double>> next_chunks;
-  next_chunks.resize((chunks.size() + 1) / 2);
+  while (chunks.size() > 1) {
+    std::vector<std::vector<double>> next_chunks;
+    next_chunks.resize((chunks.size() + 1) / 2);
 
-  int half_size = static_cast<int>(chunks.size() / 2);
+    size_t half_size = chunks.size() / 2;
 
-  // Использование OpenMP для параллельного древовидного слияния (OMP часть)
 #pragma omp parallel for default(none) shared(chunks, next_chunks, half_size)
-  for (int i = 0; i < half_size; ++i) {
-    next_chunks[i] = SimpleMerge(chunks[2 * i], chunks[2 * i + 1]);
+    for (size_t i = 0; i < half_size; ++i) {
+      // Добавили скобки и используем size_t, чтобы избежать implicit-widening
+      next_chunks[i] = SimpleMerge(chunks[(2 * i)], chunks[(2 * i) + 1]);
+    }
+
+    if (chunks.size() % 2 != 0) {
+      next_chunks.back() = std::move(chunks.back());
+    }
+
+    chunks = std::move(next_chunks);
   }
 
-  if (chunks.size() % 2 != 0) {
-    next_chunks.back() = std::move(chunks.back());
-  }
-
-  return ParallelMerge(next_chunks);
+  return std::move(chunks[0]);
 }
 
 bool FrolovaSRadixSortDoubleALL::RunImpl() {
@@ -153,16 +163,13 @@ bool FrolovaSRadixSortDoubleALL::RunImpl() {
     }
   }
 
-  // Очистка от пустых чанков, если потоков больше, чем элементов
-  chunks.erase(std::remove_if(chunks.begin(), chunks.end(), [](const std::vector<double> &c) { return c.empty(); }),
-               chunks.end());
+  // Используем C++20 std::erase_if вместо remove_if + erase (modernize-use-ranges)
+  std::erase_if(chunks, [](const std::vector<double> &c) { return c.empty(); });
 
   num_chunks = static_cast<int>(chunks.size());
 
-  // Использование TBB для параллельной сортировки кусков (TBB часть)
   tbb::parallel_for(0, num_chunks, [&](int i) { ProcessChunk(chunks[i]); });
 
-  // Запуск слияния
   std::vector<double> sorted = ParallelMerge(chunks);
   GetOutput() = std::move(sorted);
 

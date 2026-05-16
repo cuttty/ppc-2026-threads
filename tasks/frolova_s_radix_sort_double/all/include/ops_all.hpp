@@ -1,6 +1,5 @@
 #pragma once
 
-#include <string>
 #include <vector>
 
 #include "frolova_s_radix_sort_double/common/include/common.hpp"
